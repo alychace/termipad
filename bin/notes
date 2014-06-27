@@ -52,7 +52,7 @@ end
 ###############################################################################
 
 def new_note(name)
-    filename = "#{ENV['HOME']}/.notes/#{name}-#{TIME}.markdown"
+    filename = "#{ENV['HOME']}/notes/#{name}-#{TIME}.markdown"
 
     file = File.new(filename, 'w+')
     OPTIONS[:template].sub!('$TITLE', name)
@@ -62,7 +62,7 @@ def new_note(name)
     file.close()
     
     puts "#{OPTIONS[:editor]} '#{filename}'"
-    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/.notes/#{name}-#{TIME}.markdown'")
+    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/notes/#{name}-#{TIME}.markdown'")
 end
 
 ###############################################################################
@@ -70,7 +70,15 @@ end
 ###############################################################################
 
 def find_by_tag(tag)
-
+    list = []
+    notes = Dir.entries("#{ENV['HOME']}/notes/")
+    notes.delete(".")
+    notes.delete("..")
+    for note in notes
+        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        list.push(note) if data["tags"].include?(tag)
+    end
+    puts list
 end
 
 ###############################################################################
@@ -110,9 +118,9 @@ options.separator("")
 
 #### Database Queries
 
-#options.on('-n', '--new NAME', String, "Create a new note." ) do |arg|
-#    new_note(arg);
-#end
+options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
+    find_by_tag(arg)
+end
 
 options.separator("")
 
