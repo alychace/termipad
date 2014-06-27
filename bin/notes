@@ -18,6 +18,7 @@ require 'rubygems'
 require 'optparse'
 
 require 'yaml'
+require 'redcarpet'
 require 'fileutils'
 
 NAME = $0
@@ -30,6 +31,7 @@ NOTE = {}
 NOTE[:notebook] = "unsorted"
 NOTE[:time] = TIME
 
+OPTIONS[:export_directory] = ENV['PWD']
 OPTIONS[:template] = """---
 title: $TITLE
 created: $TIME
@@ -112,7 +114,7 @@ def find_by(attribute, name)
             list.push(note) if data["tags"].include?(name)
         end
     end
-    puts list
+    return list
 end
 
 def search(term)
@@ -122,6 +124,21 @@ def search(term)
         list.push(note) if file.include?(term)
     end
     puts list
+end
+
+###############################################################################
+#### Exporting
+###############################################################################
+
+def export_notebook_to_html(notebook, folder)
+    FileUtils.mkdir_p(folder)
+    renderer = Redcarpet::Render::HTML.new(render_options = {})
+    markdown = Redcarpet::Markdown.new(renderer, extensions = {})
+
+    for note in find_by("notebook", notebook)
+        html_file = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
+        html_file.puts markdown.render(File.new("#{OPTIONS[:notes_source]}/" + note, "r").read)
+    end
 end
 
 ###############################################################################
@@ -148,6 +165,9 @@ options.on('--notebook=OPT', String, "Set the notebook." ) do |arg|
     NOTE[:notebook] = arg
 end
 
+options.on('--destination=OPT', String, "Set the destination for exported notes." ) do |arg|
+    NOTE[:export_directory] = arg
+end
 
 options.separator("")
 
@@ -170,16 +190,16 @@ options.separator("")
 #### Database Queries
 
 options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
-    find_by("tags", arg)
+    puts find_by("tags", arg)
 end
 
 
 options.on('--title TITLE', String, "Find all notes with certain title." ) do |arg|
-    find_by("title", arg)
+    puts find_by("title", arg)
 end
 
 options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|g
-    find_by("notebook", arg)
+    puts find_by("notebook", arg)
 end
 
 options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
@@ -187,6 +207,12 @@ options.on('--search TERM', String, "List all notes containing a certain string.
 end
 
 options.separator("")
+
+#### Exporting
+
+options.on('--html-export NOTEBOOK', String, "Export a notebook to HTML." ) do |arg|
+    export_notebook_to_html(arg, OPTIONS[:export_directory])
+end
 
 #### Help and Version
 
