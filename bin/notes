@@ -1,0 +1,124 @@
+#!/usr/bin/ruby
+# Copyright (C) Thomas Chace 2011-2014 <tchacex@gmail.com>
+# This file is part of Post.
+# Post is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Post is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public License
+# along with Post.  If not, see <http://www.gnu.org/licenses/>.
+
+require('rubygems')
+require('optparse')
+
+require('yaml')
+
+NAME = $0
+VERSION = '0.0.1'
+OPTIONS = {}
+TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
+
+NOTE = {}
+
+NOTE[:notebook] = "unsorted"
+NOTE[:time] = TIME
+
+OPTIONS[:template] = """---
+title: $TITLE
+created: $TIME
+notebook: $NOTEBOOK
+tags:
+- myTag
+---
+
+# Heading 1
+"""
+
+begin
+    CONFIG = YAML::load_file(ENV['HOME'] + "/.notes/settings.yaml")
+    OPTIONS[:editor] = CONFIG['editor']
+rescue
+    OPTIONS[:editor] = "vi"
+end
+
+###############################################################################
+#### 
+###############################################################################
+
+def new_note(name)
+    filename = "#{ENV['HOME']}/.notes/#{name}-#{TIME}.markdown"
+
+    file = File.new(filename, 'w+')
+    OPTIONS[:template].sub!('$TITLE', name)
+    OPTIONS[:template].sub!('$TIME', NOTE[:time])
+    OPTIONS[:template].sub!('$NOTEBOOK', NOTE[:notebook])
+    file.puts(OPTIONS[:template])
+    file.close()
+    
+    puts "#{OPTIONS[:editor]} '#{filename}'"
+    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/.notes/#{name}-#{TIME}.markdown'")
+end
+
+###############################################################################
+#### 
+###############################################################################
+
+def find_by_tag(tag)
+
+end
+
+###############################################################################
+#### Argument Handling
+###############################################################################
+
+options = ARGV.options()
+options.set_summary_indent('    ')
+options.banner =    "Usage: #{NAME} [OPTIONS] [PACKAGES]"
+options.version =   "#{NAME} #{VERSION}"
+options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
+
+#### Settings
+
+options.on('--editor=OPT', String, "Change the text editor." ) do |arg|
+    OPTIONS[:editor] = arg
+end
+
+options.on('--time=OPT', String, "Set creation time." ) do |arg|
+    NOTE[:time] = arg
+end
+
+options.on('--notebook=OPT', String, "Set the notebook." ) do |arg|
+    NOTE[:notebook] = arg
+end
+
+
+options.separator("")
+
+#### Options.
+
+options.on('-n', '--new NAME', String, "Create a new note." ) do |arg|
+    new_note(arg);
+end
+
+options.separator("")
+
+#### Database Queries
+
+#options.on('-n', '--new NAME', String, "Create a new note." ) do |arg|
+#    new_note(arg);
+#end
+
+options.separator("")
+
+#### Help and Version
+
+options.on('-h', '--help', 'Show this help message.') { puts(options) }
+options.on('-v', '--version', 'Show version information.') { puts(options.version) }
+
+options.parse!
