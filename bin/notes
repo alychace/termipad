@@ -50,7 +50,7 @@ rescue
 end
 
 ###############################################################################
-#### 
+#### Note Operations
 ###############################################################################
 
 def new_note(name)
@@ -95,23 +95,17 @@ def delete_note(name)
 end
 
 ###############################################################################
-#### Database Queries
+#### Queries
 ###############################################################################
 
-def find_by_tag(tag)
+def find_by(attribute, name)
     list = []
     for note in NOTES
         data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
-        list.push(note) if data["tags"].include?(tag)
-    end
-    puts list
-end
-
-def find_by_notebook(notebook)
-    list = []
-    for note in NOTES
-        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
-        list.push(note) if data["notebook"] == notebook
+        list.push(note) if data[attribute] == name
+        if attribute == "tags"
+            list.push(note) if data["tags"].include?(name)
+        end
     end
     puts list
 end
@@ -162,11 +156,16 @@ options.separator("")
 #### Database Queries
 
 options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
-    find_by_tag(arg)
+    find_by("tags", arg)
+end
+
+
+options.on('--title TITLE', String, "Find all notes with certain title." ) do |arg|
+    find_by("title", arg)
 end
 
 options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
-    find_by_notebook(arg)
+    find_by("notebook", arg)
 end
 
 options.separator("")
