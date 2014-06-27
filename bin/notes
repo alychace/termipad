@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Post.  If not, see <http://www.gnu.org/licenses/>.
 
-require('rubygems')
-require('optparse')
+require 'rubygems'
+require 'optparse'
 
-require('yaml')
-require('fileutils')
+require 'yaml'
+require 'fileutils'
 
 NAME = $0
 VERSION = '0.0.1'
@@ -26,7 +26,6 @@ OPTIONS = {}
 TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
 
 NOTE = {}
-NOTES = Dir["#{ENV['HOME']}/notes/*"].map { |a| File.basename(a) }
 
 NOTE[:notebook] = "unsorted"
 NOTE[:time] = TIME
@@ -40,21 +39,27 @@ tags:
 ---
 
 # Heading 1
+Lorem ipsum dolor sit amet, consectetur adipisicing elit...
 """
 
 begin
     CONFIG = YAML::load_file(ENV['HOME'] + "/.notes/settings.yaml")
     OPTIONS[:editor] = CONFIG['editor']
+    OPTIONS[:notes_source] = CONFIG['notes_source'].sub("~", "#{ENV['HOME']}/")
 rescue
     OPTIONS[:editor] = "vi"
+    OPTIONS[:notes_source] = "#{ENV['HOME']}/notes"
 end
+
+FileUtils.mkdir_p("#{OPTIONS[:notes_source]}")
+NOTES = Dir["#{OPTIONS[:notes_source]}/*"].map { |a| File.basename(a) }
 
 ###############################################################################
 #### Note Operations
 ###############################################################################
 
 def new_note(name)
-    filename = "#{ENV['HOME']}/notes/#{name}-#{TIME}.markdown"
+    filename = "#{OPTIONS[:notes_source]}/#{name}-#{TIME}.markdown"
 
     file = File.new(filename, 'w+')
     OPTIONS[:template].sub!('$TITLE', name)
@@ -70,7 +75,7 @@ end
 def edit_note(name)
     list = []
     for note in NOTES
-        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        data = YAML::load_file("#{OPTIONS[:notes_source]}" + note)
         list.push(note) if data["title"] == name
     end
 
@@ -84,13 +89,13 @@ def edit_note(name)
     print('Which note would you like to edit? ')
     choice = gets.strip
     puts "Editing '#{list[choice.to_i]}'..."
-    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/notes/#{list[choice.to_i]}'")
+    system("#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[choice.to_i]}'")
 end
 
 def delete_note(name)
     for note in NOTES
-        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
-        FileUtils.rm("#{ENV['HOME']}/notes/" + note) if data["title"] == name
+        data = YAML::load_file("#{OPTIONS[:notes_source]}" + note)
+        FileUtils.rm("#{OPTIONS[:notes_source]}" + note) if data["title"] == name
     end
 end
 
@@ -101,11 +106,20 @@ end
 def find_by(attribute, name)
     list = []
     for note in NOTES
-        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        data = YAML::load_file("#{OPTIONS[:notes_source]}/" + note)
         list.push(note) if data[attribute] == name
         if attribute == "tags"
             list.push(note) if data["tags"].include?(name)
         end
+    end
+    puts list
+end
+
+def search(term)
+    list = []
+    for note in NOTES
+        file = File.new("#{OPTIONS[:notes_source]}/" + note, "r").read
+        list.push(note) if file.include?(term)
     end
     puts list
 end
@@ -116,7 +130,7 @@ end
 
 options = ARGV.options()
 options.set_summary_indent('    ')
-options.banner =    "Usage: #{NAME} [OPTIONS] [PACKAGES]"
+options.banner =    "Usage: #{NAME} [OPTIONS] [NOTE]"
 options.version =   "#{NAME} #{VERSION}"
 options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
 
@@ -164,8 +178,12 @@ options.on('--title TITLE', String, "Find all notes with certain title." ) do |a
     find_by("title", arg)
 end
 
-options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
+options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|g
     find_by("notebook", arg)
+end
+
+options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
+    search(arg)
 end
 
 options.separator("")
