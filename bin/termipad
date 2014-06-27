@@ -75,17 +75,17 @@ def new_note(name)
 end
 
 def edit_note(name)
-    list = []
-    for note in NOTES
+    list = NOTES.map do |note|
         data = YAML::load_file("#{OPTIONS[:notes_source]}" + note)
-        list.push(note) if data["title"] == name
+        note if data["title"] == name
     end
+    list.compact!
 
     unless list.empty?
         puts("There may be multiple notes with this name:")
 
         i = 0
-        for note in list
+        list.each do |note|
             puts("(#{i.to_s}) #{note}")
             i = i + 1
         end
@@ -97,17 +97,17 @@ def edit_note(name)
 end
 
 def delete_note(name)
-    list = []
-    for note in NOTES
+    list = NOTES.map do |note|
         data = YAML::load_file("#{OPTIONS[:notes_source]}" + note)
-        list.push(note) if data["title"] == name
+        note if data["title"] == name
     end
+    list.compact!
 
     unless list.empty?
         puts("There may be multiple notes with this name:")
 
         i = 0
-        for note in list
+        list.each do |note|
             puts("(#{i.to_s}) #{note}")
             i = i + 1
         end
@@ -123,24 +123,23 @@ end
 ###############################################################################
 
 def find_by(attribute, name)
-    list = []
-    for note in NOTES
+    list = NOTES.map do |note|
         data = YAML::load_file("#{OPTIONS[:notes_source]}/" + note)
-        list.push(note) if data[attribute] == name
         if attribute == "tags"
-            list.push(note) if data["tags"].include?(name)
+            note if data["tags"].include?(name)
+        else
+            note if data[attribute] == name
         end
     end
-    return list
+    return list.compact
 end
 
 def search(term)
-    list = []
-    for note in NOTES
+    list = NOTES.map do |note|
         file = File.new("#{OPTIONS[:notes_source]}/" + note, "r").read
-        list.push(note) if file.include?(term)
+        note if file.include?(term)
     end
-    puts list
+    return list.compact
 end
 
 ###############################################################################
@@ -152,18 +151,13 @@ def export_notebook_to_html(notebook, folder)
     renderer = Redcarpet::Render::HTML.new(render_options = {})
     markdown = Redcarpet::Markdown.new(renderer, extensions = {})
 
-    for note in find_by("notebook", notebook)
+    find_by("notebook", notebook).each do |note|
         markdown_file = File.new("#{OPTIONS[:notes_source]}/" + note, "r")
         html_file = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
         ignore = false
-        content = []
-        for line in markdown_file.readlines
-            if line == "---\n"
-                ignore = ignore.!
-            end
-            if ignore == false
-                content.push(line)
-            end
+        content = markdown_file.readlines.map do |line|
+            ignore = ignore.! if line == "---\n"
+            line if ignore == false
         end
         html_file.puts markdown.render(content.join)
     end
@@ -173,9 +167,10 @@ end
 #### Argument Handling
 ###############################################################################
 
-options = ARGV.options()
+options = ARGV.options
 options.set_summary_indent('    ')
-options.banner =    "Usage: #{NAME} [OPTIONS] [NOTE]"
+options.banner =    "Usage: [OPTIONS] [COMMANDS] [NOTE] or:
+Usage: [OPTIONS] [QUERY] [TEXT]" 
 options.version =   "#{NAME} #{VERSION}"
 options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
 
@@ -233,7 +228,7 @@ options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) 
 end
 
 options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
-    search(arg)
+    puts search(arg)
 end
 
 #### Exporting
