@@ -18,6 +18,7 @@ require('rubygems')
 require('optparse')
 
 require('yaml')
+require('fileutils')
 
 NAME = $0
 VERSION = '0.0.1'
@@ -25,6 +26,7 @@ OPTIONS = {}
 TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
 
 NOTE = {}
+NOTES = Dir["#{ENV['HOME']}/notes/*"].map { |a| File.basename(a) }
 
 NOTE[:notebook] = "unsorted"
 NOTE[:time] = TIME
@@ -61,22 +63,55 @@ def new_note(name)
     file.puts(OPTIONS[:template])
     file.close()
     
-    puts "#{OPTIONS[:editor]} '#{filename}'"
-    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/notes/#{name}-#{TIME}.markdown'")
+    puts "Editing '#{filename}'..."
+    system("#{OPTIONS[:editor]} '#{filename}'")
+end
+
+def edit_note(name)
+    list = []
+    for note in NOTES
+        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        list.push(note) if data["title"] == name
+    end
+
+    puts("There may be multiple notes with this name:")
+
+    i = 0
+    for note in list
+        puts("(#{i.to_s}) #{note}")
+        i = i + 1
+    end
+    print('Which note would you like to edit? ')
+    choice = gets.strip
+    puts "Editing '#{list[choice.to_i]}'..."
+    system("#{OPTIONS[:editor]} '#{ENV['HOME']}/notes/#{list[choice.to_i]}'")
+end
+
+def delete_note(name)
+    for note in NOTES
+        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        FileUtils.rm("#{ENV['HOME']}/notes/" + note) if data["title"] == name
+    end
 end
 
 ###############################################################################
-#### 
+#### Database Queries
 ###############################################################################
 
 def find_by_tag(tag)
     list = []
-    notes = Dir.entries("#{ENV['HOME']}/notes/")
-    notes.delete(".")
-    notes.delete("..")
-    for note in notes
+    for note in NOTES
         data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
         list.push(note) if data["tags"].include?(tag)
+    end
+    puts list
+end
+
+def find_by_notebook(notebook)
+    list = []
+    for note in NOTES
+        data = YAML::load_file("#{ENV['HOME']}/notes/" + note)
+        list.push(note) if data["notebook"] == notebook
     end
     puts list
 end
@@ -114,12 +149,24 @@ options.on('-n', '--new NAME', String, "Create a new note." ) do |arg|
     new_note(arg);
 end
 
+options.on('-e', '--edit NAME', String, "Edit a note." ) do |arg|
+    edit_note(arg);
+end
+
+options.on('-d', '--delete NAME', String, "Delete a note." ) do |arg|
+    delete_note(arg);
+end
+
 options.separator("")
 
 #### Database Queries
 
 options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
     find_by_tag(arg)
+end
+
+options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
+    find_by_notebook(arg)
 end
 
 options.separator("")
