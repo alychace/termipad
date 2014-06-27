@@ -1,0 +1,10 @@
+---
+title: Example Note
+created: 2014-06-27_12:07:10_0400
+notebook: unsorted
+tags:
+- examples
+---
+
+# Example Heading
+Lorem ipsum dolor sit amet, consectetur adipisicing elit...
