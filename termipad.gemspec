@@ -12,15 +12,15 @@ end
 date = "#{time.year}-#{month}-#{day}"
 
 Gem::Specification.new do |s|
-    s.name        = 'notes'
+    s.name        = 'termipad'
     s.license     = 'GPL'
-    s.executables << 'notes'
+    s.executables << 'termipad'
     s.version     = '0.0.1'
     s.date        = date
     s.summary     = 'Command line note manager.'
-    s.description = 'Notes is a small utility for writing, searching, and editing notes of all kinds.'
+    s.description = 'Termipad is a small utility for writing, searching, and editing notes of all kinds.'
     s.authors     = ['Thomas Chace']
     s.email       = 'tchacex@gmail.com'
     s.homepage    =
-        'http://github.com/thomashc/notes'
+        'http://github.com/thomashc/termipad'
 end
