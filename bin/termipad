@@ -153,8 +153,19 @@ def export_notebook_to_html(notebook, folder)
     markdown = Redcarpet::Markdown.new(renderer, extensions = {})
 
     for note in find_by("notebook", notebook)
+        markdown_file = File.new("#{OPTIONS[:notes_source]}/" + note, "r")
         html_file = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
-        html_file.puts markdown.render(File.new("#{OPTIONS[:notes_source]}/" + note, "r").read)
+        ignore = false
+        content = []
+        for line in markdown_file.readlines
+            if line == "---\n"
+                ignore = ignore.!
+            end
+            if ignore == false
+                content.push(line)
+            end
+        end
+        html_file.puts markdown.render(content.join)
     end
 end
 
@@ -217,7 +228,7 @@ options.on('--title TITLE', String, "Find all notes with certain title." ) do |a
     puts find_by("title", arg)
 end
 
-options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|g
+options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
     puts find_by("notebook", arg)
 end
 
