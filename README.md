@@ -1,0 +1,4 @@
+## Dependencies
+
+	gem install redcarpet
+
