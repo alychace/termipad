@@ -24,12 +24,18 @@ require 'fileutils'
 NAME = $0
 VERSION = '0.0.1'
 OPTIONS = {}
+NOTE = {}
+
+#####
+
 TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
 
-NOTE = {}
+#####
 
 NOTE[:notebook] = "unsorted"
 NOTE[:time] = TIME
+
+#####
 
 OPTIONS[:export_directory] = ENV['PWD']
 OPTIONS[:template] = """---
@@ -43,6 +49,8 @@ tags:
 # Heading 1
 Lorem ipsum dolor sit amet, consectetur adipisicing elit...
 """
+
+#####
 
 begin
     CONFIG = YAML::load_file(ENV['HOME'] + "/.notes/settings.yaml")
@@ -122,22 +130,17 @@ end
 #### Queries
 ###############################################################################
 
-def find_by(attribute, name)
+def find_by(attribute, term)
     list = NOTES.map do |note|
         data = YAML::load_file("#{OPTIONS[:notes_source]}/" + note)
-        if attribute == "tags"
-            note if data["tags"].include?(name)
-        else
-            note if data[attribute] == name
-        end
-    end
-    return list.compact
-end
-
-def search(term)
-    list = NOTES.map do |note|
         file = File.new("#{OPTIONS[:notes_source]}/" + note, "r").read
-        note if file.include?(term)
+        if attribute == "tags"
+            note if data["tags"].include?(term)
+        elsif attribute == "content"
+            note if file.include?(term)
+        else
+            note if data[attribute] == term
+        end
     end
     return list.compact
 end
@@ -156,10 +159,10 @@ def export_notebook_to_html(notebook, folder)
         html_file = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
         ignore = false
         content = markdown_file.readlines.map do |line|
-            ignore = ignore.! if line == "---\n"
+            ignore = !ignore if line == "---\n"
             line if ignore == false
         end
-        html_file.puts markdown.render(content.join)
+        html_file.puts(markdown.render(content.join))
     end
 end
 
@@ -228,7 +231,7 @@ options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) 
 end
 
 options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
-    puts search(arg)
+    puts find_by("content", arg)
 end
 
 #### Exporting
