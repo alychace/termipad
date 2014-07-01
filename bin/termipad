@@ -20,16 +20,12 @@ require 'yaml'
 require 'redcarpet'
 
 OPTIONS = {}
-TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
-
-#####
-
+TIME = Time.now.to_s.sub(' ', '_').sub ' -', '_'
+CONFIG = YAML::load_file(ENV['HOME'] + '/.notes/settings.yaml')
 OPTIONS[:notebook] = 'unsorted'
 OPTIONS[:time] = TIME
 OPTIONS[:export_directory] = ENV['PWD']
 OPTIONS[:template] = File.read ENV['HOME'] + '/.notes/template.markdown'
-
-CONFIG = YAML::load_file(ENV['HOME'] + '/.notes/settings.yaml')
 OPTIONS[:editor] = CONFIG['editor']
 OPTIONS[:notes_source] = CONFIG['notes_source'].sub('~', "#{ENV['HOME']}/")
 
@@ -101,7 +97,7 @@ def to_html notebook, folder
         ignore = false
         input.each do |line|
             ignore = !ignore if line.start_with? '---'
-            output.puts(markdown.render(line)) if not ignore
+            output.puts(markdown.render(line)) unless ignore
         end
     end
 end
