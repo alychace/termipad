@@ -11,8 +11,8 @@ Notes are written in Markdown and can be exported to HTML. A template is provide
 	- myTag
 	---
 
-	# Heading 1
-	Lorem ipsum dolor sit amet, consectetur adipisicing elit...
+# Heading 1
+Lorem ipsum dolor sit amet, consectetur adipisicing elit...
 
 ## Dependencies
 
