@@ -1,5 +1,5 @@
 #!/usr/bin/ruby
-# Copyright (C) Thomas Chace 2011-2014 <tchacex@gmail.com>
+# Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>
 # This file is part of Termipad.
 # Termipad is free software: you can redistribute it and/or modify
 # itP under the terms of the GNU Lesser General Public License as published by
@@ -19,28 +19,15 @@ require 'fileutils'
 require 'yaml'
 require 'redcarpet'
 
-NAME = $0
-VERSION = '0.0.1'
 OPTIONS = {}
-NOTE = {}
 TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
 
 #####
 
-NOTE[:notebook] = 'unsorted'
-NOTE[:time] = TIME
-
+OPTIONS[:notebook] = 'unsorted'
+OPTIONS[:time] = TIME
 OPTIONS[:export_directory] = ENV['PWD']
-OPTIONS[:template] = """---
-title: $TITLE
-created: $TIME
-notebook: $NOTEBOOK
-tags:
-- myTag
----
-
-# Heading 1
-Lorem ipsum dolor sit amet, consectetur adipisicing elit..."""
+OPTIONS[:template] = File.read ENV['HOME'] + '/.notes/template.markdown'
 
 CONFIG = YAML::load_file(ENV['HOME'] + '/.notes/settings.yaml')
 OPTIONS[:editor] = CONFIG['editor']
@@ -84,17 +71,19 @@ end
 def new_note name
     file = File.new("#{OPTIONS[:notes_source]}/#{name}-#{TIME}.markdown", 'w+')
     OPTIONS[:template].sub!('$TITLE', name)
-    OPTIONS[:template].sub!('$TIME', NOTE[:time])
-    OPTIONS[:template].sub!('$NOTEBOOK', NOTE[:notebook])
+    OPTIONS[:template].sub!('$TIME', OPTIONS[:time])
+    OPTIONS[:template].sub!('$NOTEBOOK', OPTIONS[:notebook])
     file.puts OPTIONS[:template]
 end
 
 def edit_note name
-    system "#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}'" unless find_by("title", name).empty?
+    list = find_by :title, name
+    system "#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}'" unless list.empty?
 end
 
 def delete_note name
-    FileUtils.rm "#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}" unless find_by("title", name).empty?
+    list = find_by :title, name
+    FileUtils.rm "#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}" unless list.empty?
 end
 
 ###############################################################################
@@ -107,8 +96,8 @@ def to_html notebook, folder
     markdown = Redcarpet::Markdown.new(renderer, extensions = {})
 
     find_by(:notebook, notebook).each do |note|
-        input = File.new("#{OPTIONS[:notes_source]}/" + note, "r").readlines
-        output = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
+        input = File.new("#{OPTIONS[:notes_source]}/" + note, 'r').readlines
+        output = File.new(folder + '/' + note.sub('.markdown', '.html'), 'w')
         ignore = false
         input.each do |line|
             ignore = !ignore if line.start_with? '---'
@@ -122,9 +111,8 @@ end
 ###############################################################################
 
 ARGV.options.set_summary_indent '    '
-ARGV.options.banner =    "Usage: [OPTIONS] [COMMANDS] [NOTE] or:
-Usage: [OPTIONS] [QUERY] [TEXT]" 
-ARGV.options.version =   "#{NAME} #{VERSION}"
+ARGV.options.banner =    "Usage: [OPTIONS] [COMMANDS] [TEXT]"
+ARGV.options.version =   "#{$0} 0.1"
 ARGV.options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
 
 #### Options
@@ -134,15 +122,15 @@ ARGV.options.on('--editor=OPT', String, "Change the text editor." ) do |arg|
 end
 
 ARGV.options.on('--time=OPT', String, "Set creation time." ) do |arg|
-    NOTE[:time] = arg
+    OPTIONS[:time] = arg
 end
 
 ARGV.options.on('--notebook=OPT', String, "Set the notebook." ) do |arg|
-    NOTE[:notebook] = arg
+    OPTIONS[:notebook] = arg
 end
 
 ARGV.options.on('--destination=OPT', String, "Set the destination for exported notes." ) do |arg|
-    NOTE[:export_directory] = arg
+    OPTIONS[:export_directory] = arg
 end
 
 ARGV.options.on('-n', '--new NOTE', String, "Create a new note." ) do |arg|
@@ -183,7 +171,7 @@ end
 ARGV.options.separator ''
 
 ARGV.options.on('--html NOTEBOOK', String, "Export a notebook to HTML." ) do |arg|
-    to_html(arg, OPTIONS[:export_directory])
+    to_html arg, OPTIONS[:export_directory]
 end
 
 #### Help and Version
