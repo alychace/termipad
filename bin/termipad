@@ -25,9 +25,6 @@ NAME = $0
 VERSION = '0.0.1'
 OPTIONS = {}
 NOTE = {}
-
-#####
-
 TIME = Time.now.to_s.sub(' ', '_').sub(" -", "_")
 
 #####
@@ -55,9 +52,9 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit...
 begin
     CONFIG = YAML::load_file(ENV['HOME'] + "/.notes/settings.yaml")
     OPTIONS[:editor] = CONFIG['editor']
-    OPTIONS[:notes_source] = CONFIG['notes_source'].sub("~", "#{ENV['HOME']}/")
+    OPTIONS[:notes_source] = CONFIG['notes_source'].sub('~', "#{ENV['HOME']}/")
 rescue
-    OPTIONS[:editor] = "vi"
+    OPTIONS[:editor] = 'vi'
     OPTIONS[:notes_source] = "#{ENV['HOME']}/notes"
 end
 
@@ -68,81 +65,69 @@ NOTES = Dir["#{OPTIONS[:notes_source]}/*"].map { |a| File.basename(a) }
 #### Queries
 ###############################################################################
 
-def find_by(attribute, term)
-    list = NOTES.map do |note|
+def find_by attribute, term
+    NOTES.select do |note|
         data = YAML::load_file("#{OPTIONS[:notes_source]}/" + note)
         file = File.new("#{OPTIONS[:notes_source]}/" + note, "r").read
-        if attribute == "tags"
-            note if data["tags"].include?(term)
-        elsif attribute == "content"
+        if attribute == :tags
+            note if data[attribute.to_s].include?(term)
+        elsif attribute == :content
             note if file.include?(term)
         else
-            note if data[attribute] == term
+            note if data[attribute.to_s] == term
         end
     end
-    return list.compact
 end
 
 ###############################################################################
 #### Note Operations
 ###############################################################################
 
-def get_input(list)
+def get_input list
     i = 0
     list.each do |note|
         puts("(#{i.to_s}) #{note}")
-        i = i + 1
+        i += 1
     end
-    print('Choice: ')
-    choice = gets.strip
-    return list[choice.to_i]
+    print 'Choice: '
+    list[gets.to_i]
 end
 
-def new_note(name)
-    filename = "#{OPTIONS[:notes_source]}/#{name}-#{TIME}.markdown"
-
-    file = File.new(filename, 'w+')
+def new_note name
+    file = File.new("#{OPTIONS[:notes_source]}/#{name}-#{TIME}.markdown", 'w+')
     OPTIONS[:template].sub!('$TITLE', name)
     OPTIONS[:template].sub!('$TIME', NOTE[:time])
     OPTIONS[:template].sub!('$NOTEBOOK', NOTE[:notebook])
-    file.puts(OPTIONS[:template])
-    file.close()
+    file.puts OPTIONS[:template]
+    file.close
 end
 
-def edit_note(name)
-    list = find_by("title", name)
-    unless list.empty?
-        choice = get_input(list)
-        system("#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[choice.to_i]}'")
-    end
+def edit_note name
+    system "#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}'" unless find_by("title", name).empty?
 end
 
-def delete_note(name)
-    list = find_by("title", name)
-    unless list.empty?
-        choice = get_input(list)
-        FileUtils.rm("#{OPTIONS[:notes_source]}/#{list[choice.to_i]}")
-    end
+def delete_note name
+    FileUtils.rm("#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}") unless find_by("title", name).empty?
 end
 
 ###############################################################################
 #### Exporting
 ###############################################################################
 
-def export_notebook_to_html(notebook, folder)
-    FileUtils.mkdir_p(folder)
+def to_html notebook, folder
+    FileUtils.mkdir_p folder
     renderer = Redcarpet::Render::HTML.new(render_options = {})
     markdown = Redcarpet::Markdown.new(renderer, extensions = {})
 
-    find_by("notebook", notebook).each do |note|
-        markdown_file = File.new("#{OPTIONS[:notes_source]}/" + note, "r")
-        html_file = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
-        content = markdown_file.readlines.map do |line|
-            ignore = false unless defined?(ignore)
-            ignore = !ignore if line.start_with? "---"
+    find_by(:notebook, notebook).each do |note|
+        input = File.new("#{OPTIONS[:notes_source]}/" + note, "r").readlines
+        output = File.new(folder + "/" + note.sub(".markdown", ".html"), 'w')
+        ignore = false
+        content = input.select do |line|
+            ignore = !ignore if line.start_with? '---'
             line if not ignore
         end
-        html_file.puts(markdown.render(content.join))
+        output.puts(markdown.render(content.join))
     end
 end
 
@@ -150,7 +135,7 @@ end
 #### Argument Handling
 ###############################################################################
 
-ARGV.options.set_summary_indent('    ')
+ARGV.options.set_summary_indent '    '
 ARGV.options.banner =    "Usage: [OPTIONS] [COMMANDS] [NOTE] or:
 Usage: [OPTIONS] [QUERY] [TEXT]" 
 ARGV.options.version =   "#{NAME} #{VERSION}"
@@ -174,8 +159,6 @@ ARGV.options.on('--destination=OPT', String, "Set the destination for exported n
     NOTE[:export_directory] = arg
 end
 
-#### Options.
-
 ARGV.options.on('-n', '--new NOTE', String, "Create a new note." ) do |arg|
     new_note(arg);
 end
@@ -190,38 +173,38 @@ end
 
 #### Database Queries
 
-ARGV.options.separator("")
+ARGV.options.separator ''
 
 ARGV.options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
-    puts find_by("tags", arg)
+    puts find_by(:tags, arg)
 end
 
 
 ARGV.options.on('--title TITLE', String, "Find all notes with certain title." ) do |arg|
-    puts find_by("title", arg)
+    puts find_by(:title, arg)
 end
 
 ARGV.options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
-    puts find_by("notebook", arg)
+    puts find_by(:notebook, arg)
 end
 
 ARGV.options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
-    puts find_by("content", arg)
+    puts find_by(:content, arg)
 end
 
 #### Exporting
 
-ARGV.options.separator("")
+ARGV.options.separator ''
 
 ARGV.options.on('--html NOTEBOOK', String, "Export a notebook to HTML." ) do |arg|
-    export_notebook_to_html(arg, OPTIONS[:export_directory])
+    to_html(arg, OPTIONS[:export_directory])
 end
 
 #### Help and Version
 
-ARGV.options.separator("")
+ARGV.options.separator ''
 
-ARGV.options.on('-h', '--help', 'Show this help message.') { puts(options) }
-ARGV.options.on('-v', '--version', 'Show version information.') { puts(options.version) }
+ARGV.options.on('-h', '--help', 'Show this help message.') { puts(ARGV.options) }
+ARGV.options.on('-v', '--version', 'Show version information.') { puts(ARGV.options.version) }
 
 ARGV.options.parse!
