@@ -19,18 +19,19 @@ require 'fileutils'
 require 'yaml'
 require 'redcarpet'
 
-OPTIONS = {}
-TIME = Time.now.to_s.sub(' ', '_').sub ' -', '_'
-CONFIG = YAML::load_file(ENV['HOME'] + '/.notes/settings.yaml')
-OPTIONS[:notebook] = 'unsorted'
-OPTIONS[:time] = TIME
-OPTIONS[:export_directory] = ENV['PWD']
-OPTIONS[:template] = File.read ENV['HOME'] + '/.notes/template.markdown'
-OPTIONS[:editor] = CONFIG['editor']
-OPTIONS[:notes_source] = CONFIG['notes_source'].sub('~', "#{ENV['HOME']}/")
+CONFIG = YAML::load_file "#{ENV['HOME']}/.notes/settings.yaml"
 
-FileUtils.mkdir_p "#{OPTIONS[:notes_source]}"
-NOTES = Dir["#{OPTIONS[:notes_source]}/*"].map { |a| File.basename(a) }
+OPTIONS = {
+    notebook: 'unsorted',
+    time: Time.now.to_s.sub(' ', '_').sub(' -', '_'),
+    export: ENV['PWD'],
+    template: File.read(ENV['HOME'] + '/.notes/template.markdown'),
+    editor: CONFIG['editor'],
+    source: CONFIG['notes_source'].sub('~', "#{ENV['HOME']}/")
+}
+
+FileUtils.mkdir_p OPTIONS[:source]
+NOTES = Dir["#{OPTIONS[:source]}/*"].map { |a| File.basename(a) }
 
 ###############################################################################
 #### Queries
@@ -38,8 +39,8 @@ NOTES = Dir["#{OPTIONS[:notes_source]}/*"].map { |a| File.basename(a) }
 
 def find_by attribute, term
     NOTES.select do |note|
-        data = YAML::load_file("#{OPTIONS[:notes_source]}/" + note)
-        file = File.new("#{OPTIONS[:notes_source]}/" + note, "r").read
+        data = YAML::load_file("#{OPTIONS[:source]}/" + note)
+        file = File.read "#{OPTIONS[:source]}/" + note
         if attribute == :tags
             note if data[attribute.to_s].include?(term)
         elsif attribute == :content
@@ -55,17 +56,15 @@ end
 ###############################################################################
 
 def get_input list
-    i = 0
-    list.each do |note|
-        puts("(#{i.to_s}) #{note}")
-        i += 1
+    list.each_with_index do |note, index|
+        puts("(#{index}) #{note}")
     end
     print 'Choice: '
     list[gets.to_i]
 end
 
 def new_note name
-    file = File.new("#{OPTIONS[:notes_source]}/#{name}-#{TIME}.markdown", 'w+')
+    file = File.new("#{OPTIONS[:source]}/#{name}-#{OPTIONS[:time]}.markdown", 'w+')
     OPTIONS[:template].sub!('$TITLE', name)
     OPTIONS[:template].sub!('$TIME', OPTIONS[:time])
     OPTIONS[:template].sub!('$NOTEBOOK', OPTIONS[:notebook])
@@ -74,12 +73,12 @@ end
 
 def edit_note name
     list = find_by :title, name
-    system "#{OPTIONS[:editor]} '#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}'" unless list.empty?
+    system "#{OPTIONS[:editor]} '#{OPTIONS[:source]}/#{list[get_input(list).to_i]}'" unless list.empty?
 end
 
 def delete_note name
     list = find_by :title, name
-    FileUtils.rm "#{OPTIONS[:notes_source]}/#{list[get_input(list).to_i]}" unless list.empty?
+    FileUtils.rm "#{OPTIONS[:source]}/#{list[get_input(list).to_i]}" unless list.empty?
 end
 
 ###############################################################################
@@ -92,8 +91,10 @@ def to_html notebook, folder
     markdown = Redcarpet::Markdown.new(renderer, extensions = {})
 
     find_by(:notebook, notebook).each do |note|
-        input = File.new("#{OPTIONS[:notes_source]}/" + note, 'r').readlines
+        input = File.readlines "#{OPTIONS[:source]}/" + note
         output = File.new(folder + '/' + note.sub('.markdown', '.html'), 'w')
+        data = YAML::load_file "#{OPTIONS[:source]}/" + note
+        output.puts "<title> #{data['title']} </title>"
         ignore = false
         input.each do |line|
             ignore = !ignore if line.start_with? '---'
@@ -116,62 +117,49 @@ ARGV.options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
 ARGV.options.on('--editor=OPT', String, "Change the text editor." ) do |arg|
     OPTIONS[:editor] = arg
 end
-
 ARGV.options.on('--time=OPT', String, "Set creation time." ) do |arg|
     OPTIONS[:time] = arg
 end
-
 ARGV.options.on('--notebook=OPT', String, "Set the notebook." ) do |arg|
     OPTIONS[:notebook] = arg
 end
-
 ARGV.options.on('--destination=OPT', String, "Set the destination for exported notes." ) do |arg|
-    OPTIONS[:export_directory] = arg
+    OPTIONS[:export] = arg
 end
-
 ARGV.options.on('-n', '--new NOTE', String, "Create a new note." ) do |arg|
     new_note arg
 end
-
 ARGV.options.on('-e', '--edit NOTE', String, "Edit a note." ) do |arg|
     edit_note arg
 end
-
 ARGV.options.on('-d', '--delete NOTE', String, "Delete a note." ) do |arg|
     delete_note arg
 end
 
 #### Database Queries
-
 ARGV.options.separator ''
 
 ARGV.options.on('--tag TAG', String, "Find all notes with a tag." ) do |arg|
     puts find_by :tags, arg
 end
-
-
 ARGV.options.on('--title TITLE', String, "Find all notes with certain title." ) do |arg|
     puts find_by :title, arg
 end
-
 ARGV.options.on('--notebook NOTEBOOK', String, "Find all notes within a notebook." ) do |arg|
     puts find_by :notebook, arg
 end
-
 ARGV.options.on('--search TERM', String, "List all notes containing a certain string." ) do |arg|
     puts find_by :content, arg
 end
 
 #### Exporting
-
 ARGV.options.separator ''
 
 ARGV.options.on('--html NOTEBOOK', String, "Export a notebook to HTML." ) do |arg|
-    to_html arg, OPTIONS[:export_directory]
+    to_html arg, OPTIONS[:export]
 end
 
 #### Help and Version
-
 ARGV.options.separator ''
 
 ARGV.options.on('-h', '--help', 'Show this help message.') { puts(ARGV.options) }
