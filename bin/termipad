@@ -162,7 +162,7 @@ end
 #### Help and Version
 ARGV.options.separator ''
 
-ARGV.options.on('-h', '--help', 'Show this help message.') { puts(ARGV.options) }
-ARGV.options.on('-v', '--version', 'Show version information.') { puts(ARGV.options.version) }
+ARGV.options.on('-h', '--help', 'Show this help message.') { puts ARGV.options }
+ARGV.options.on('-v', '--version', 'Show version information.') { puts ARGV.options.version }
 
 ARGV.options.parse!
