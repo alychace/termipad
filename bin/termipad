@@ -2,16 +2,16 @@
 # Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>
 # This file is part of Termipad.
 # Termipad is free software: you can redistribute it and/or modify
-# itP under the terms of the GNU Lesser General Public License as published by
+# it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
 # Termipad is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
+# GNU General Public License for more details.
 
-# You should have received a copy of the GNU Lesser General Public License
+# You should have received a copy of the GNU General Public License
 # along with Termipad.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'optparse'
@@ -39,8 +39,8 @@ NOTES = Dir["#{OPTIONS[:source]}/*"].map { |a| File.basename(a) }
 
 def find_by attribute, term
     NOTES.select do |note|
-        data = YAML::load_file("#{OPTIONS[:source]}/" + note)
-        file = File.read "#{OPTIONS[:source]}/" + note
+        data = YAML::load_file "#{OPTIONS[:source]}/#{note}"
+        file = File.read "#{OPTIONS[:source]}/#{note}"
         if attribute == :tags
             note if data[attribute.to_s].include?(term)
         elsif attribute == :content
@@ -56,9 +56,7 @@ end
 ###############################################################################
 
 def get_input list
-    list.each_with_index do |note, index|
-        puts("(#{index}) #{note}")
-    end
+    list.each_with_index { |note, index| puts "(#{index}) #{note}" }
     print 'Choice: '
     list[gets.to_i]
 end
@@ -87,8 +85,7 @@ end
 
 def to_html notebook, folder
     FileUtils.mkdir_p folder
-    renderer = Redcarpet::Render::HTML.new(render_options = {})
-    markdown = Redcarpet::Markdown.new(renderer, extensions = {})
+    markdown = Redcarpet::Markdown.new Redcarpet::Render::HTML.new
 
     find_by(:notebook, notebook).each do |note|
         input = File.readlines "#{OPTIONS[:source]}/" + note
@@ -107,8 +104,7 @@ end
 #### Argument Handling
 ###############################################################################
 
-ARGV.options.set_summary_indent '    '
-ARGV.options.banner =    "Usage: [OPTIONS] [COMMANDS] [TEXT]"
+ARGV.options.set_summary_indent '  '
 ARGV.options.version =   "#{$0} 0.1"
 ARGV.options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
 
