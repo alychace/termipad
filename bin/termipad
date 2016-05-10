@@ -18,6 +18,8 @@ require 'optparse'
 require 'fileutils'
 require 'yaml'
 require 'redcarpet'
+require 'dropbox_sdk'
+require 'erb'
 
 CONFIG = YAML::load_file "#{ENV['HOME']}/.notes/settings.yaml"
 
@@ -89,14 +91,21 @@ def to_html notebook, folder
 
     find_by(:notebook, notebook).each do |note|
         input = File.readlines "#{OPTIONS[:source]}/" + note
-        output = File.new(folder + '/' + note.sub('.markdown', '.html'), 'w')
+        output = []
+        
+        outputfile = File.new(folder + '/' + note.sub('.markdown', '.html'), 'w')
         data = YAML::load_file "#{OPTIONS[:source]}/" + note
-        output.puts "<title> #{data['title']} </title>"
+        outputfile.puts "<title> #{data['title']} </title>"
         ignore = false
         input.each do |line|
             ignore = !ignore if line.start_with? '---'
-            output.puts(markdown.render(line)) unless ignore
+            output.push(line) unless ignore
         end
+        
+        renderer = ERB.new(output.join)
+        html = markdown.render renderer.result
+        outputfile.puts html
+        outputfile.close
     end
 end
 
@@ -106,7 +115,7 @@ end
 
 ARGV.options.set_summary_indent '  '
 ARGV.options.version =   "#{$0} 0.1"
-ARGV.options.define_head "Copyright (C) Thomas Chace 2014 <tchacex@gmail.com>"
+ARGV.options.define_head "Copyright (C) Alexandra Chace 2014-016 <alychace@gmail.com>"
 
 #### Options
 

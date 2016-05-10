@@ -15,12 +15,12 @@ Gem::Specification.new do |s|
     s.name        = 'termipad'
     s.license     = 'GPL'
     s.executables << 'termipad'
-    s.version     = '0.0.1'
+    s.version     = '0.0.'
     s.date        = date
     s.summary     = 'Command line note manager.'
     s.description = 'Termipad is a small utility for writing, searching, and editing notes of all kinds.'
-    s.authors     = ['Thomas Chace']
-    s.email       = 'tchacex@gmail.com'
+    s.authors     = ['Alexandra Chace']
+    s.email       = 'alychace@gmail.com'
     s.homepage    =
-        'http://github.com/thomashc/termipad'
+        'http://github.com/leximch/termipad'
 end
