@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
     s.name        = 'termipad'
     s.license     = 'GPL'
     s.executables << 'termipad'
-    s.version     = '0.0.'
+    s.version     = '0.0.2'
     s.date        = date
     s.summary     = 'Command line note manager.'
     s.description = 'Termipad is a small utility for writing, searching, and editing notes of all kinds.'
